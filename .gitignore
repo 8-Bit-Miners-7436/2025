@@ -10,7 +10,23 @@
 # Mobile Tools for Java (J2ME)
 .mtj.tmp/
 
-# Package Files #
+# VSCode Configs
+.vscode/
+
+# WPILib files
+.wpilib/
+deploy/
+
+# Java Build and Gradle files
+bin/
+build/
+gradle/
+.gradle/
+gradlew
+gradlew.bat
+*.gradle
+
+# Package files
 *.jar
 *.war
 *.nar
