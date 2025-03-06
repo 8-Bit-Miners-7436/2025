@@ -17,7 +17,7 @@ public class Robot extends TimedRobot {
   // * Initializes Xbox Controller and IMU (Gyro)
   private final XboxController gamepad = new XboxController(0);
   private final Pigeon2 pigeon = new Pigeon2(10);
-  
+
   // * Initializes Kinematics Object w/ Swerve Module Offsets From Robot Center (In Meters)
   private final SwerveDriveKinematics kinematics = new SwerveDriveKinematics(
     new Translation2d(0.34, 0.3), // front-left
@@ -25,7 +25,7 @@ public class Robot extends TimedRobot {
     new Translation2d(-0.34, 0.3),  // rear-left
     new Translation2d(-0.34, -0.3)    // rear-right
   );
-    
+
   // * Initializes Swerve Modules And Package In Array For Easy Modular Access
   private final CustomSwerveModule[] modules = new CustomSwerveModule[] {
     new CustomSwerveModule(1), // front-left
