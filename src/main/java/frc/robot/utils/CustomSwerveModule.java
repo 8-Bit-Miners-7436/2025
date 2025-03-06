@@ -28,7 +28,7 @@ public class CustomSwerveModule {
         driveMotor = new SparkMax(moduleNumber * 2, MotorType.kBrushless);
         steerMotor = new SparkMax(moduleNumber * 2 + 1, MotorType.kBrushless);
 
-        // * Initialize the CANcoder for steering angle feedback
+        // * Initialize the Steer Motor Encoder for steering angle feedback
         steerEncoder = new CANcoder(moduleNumber + 10);
 
         // * Initialize PID Controller for steering with gains
@@ -40,22 +40,16 @@ public class CustomSwerveModule {
     }
 
     public void setTargetAngle(double targetAngleDegrees) {
-        // * Calculate the error between the target and current angle
-        double error = targetAngleDegrees - getSteerRotation();
+        // * Calculate the PID-adjusted error between the target and current angle
+        // ? Possibly already optimized
+        // ! Needs Testing
+        double pidOutput = steerPID.calculate(getSteerRotation(), targetAngleDegrees);
 
-        // * Optimize error for wrap-around
-        if (error > 0.5) {
-            error -= 1;
-        } else if (error < -0.5) {
-            error += 1;
-        }
+        // * Log pidOutput to SmartDashboard
+        SmartDashboard.putNumber(name + " Steer Motor Speed", pidOutput);
 
-        // * Log motor speed (which is currently just the error) to SmartDashboard
-        SmartDashboard.putNumber(name + " Steer Motor Speed", error);
-
-        // * Set the steer motor speed based on the error
-        // Todo: Implement proper PID control
-        steerMotor.set(error);
+        // * Set the steer motor speed based on the PID-adjusted error
+        steerMotor.set(pidOutput);
     }
 
     public void setDriveSpeed(double driveSpeed) {
