@@ -14,61 +14,74 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.utils.CustomSwerveModule;
 
 public class Robot extends TimedRobot {
-  // * Initializes Xbox Controller and IMU (Gyro)
+  // * Initialize Xbox Controller and IMU (Gyro)
   private final XboxController gamepad = new XboxController(0);
   private final Pigeon2 pigeon = new Pigeon2(10);
 
-  // * Initializes Kinematics Object w/ Swerve Module Offsets From Robot Center (In Meters)
+  // * Create Kinematics Object with Module Offsets from Robot Center (in meters)
   private final SwerveDriveKinematics kinematics = new SwerveDriveKinematics(
-    new Translation2d(0.34, 0.3), // front-left
-    new Translation2d(0.34, -0.3),  // front-right
-    new Translation2d(-0.34, 0.3),  // rear-left
-    new Translation2d(-0.34, -0.3)    // rear-right
+      new Translation2d(0.34, 0.3), // Front Left
+      new Translation2d(0.34, -0.3), // Front Right
+      new Translation2d(-0.34, 0.3), // Rear Left
+      new Translation2d(-0.34, -0.3) // Rear Right
   );
 
-  // * Initializes Swerve Modules And Package In Array For Easy Modular Access
+  // * Initialize Swerve Modules and packages them in an Array for Easy Access
   private final CustomSwerveModule[] modules = new CustomSwerveModule[] {
-    new CustomSwerveModule(1), // front-left
-    new CustomSwerveModule(2), // front-right
-    new CustomSwerveModule(3), // rear-left
-    new CustomSwerveModule(4)  // rear-right
+      new CustomSwerveModule(1, "Front Left"),
+      new CustomSwerveModule(2, "Front Right"),
+      new CustomSwerveModule(3, "Rear Left"),
+      new CustomSwerveModule(4, "Rear Right")
   };
 
-  // Todo: Make a More Permanent Elevator Solution
-  private SparkMax elevatorMotor = new SparkMax(15, MotorType.kBrushless);
+  // Todo: Implement a more permanent elevator solution
+  private final SparkMax elevatorMotor = new SparkMax(15, MotorType.kBrushless);
 
   @Override
   public void robotPeriodic() {
+    // * Retrieve and normalize Pigeon IMU angles (Yaw, Pitch, Roll)
     double pigeonYaw = pigeon.getYaw(true).getValueAsDouble() % 360;
     double pigeonPitch = pigeon.getPitch(true).getValueAsDouble() % 360;
     double pigeonRoll = pigeon.getRoll(true).getValueAsDouble() % 360;
-    SmartDashboard.putNumber("Pigeon Yaw", pigeonYaw);
-    SmartDashboard.putNumber("Pigeon Pitch", pigeonPitch);
-    SmartDashboard.putNumber("Pigeon Roll", pigeonRoll);
+
+    // * Display IMU values on the SmartDashboard
+    SmartDashboard.putNumber("Yaw", pigeonYaw);
+    SmartDashboard.putNumber("Pitch", pigeonPitch);
+    SmartDashboard.putNumber("Roll", pigeonRoll);
   }
 
   @Override
   public void teleopPeriodic() {
-    double vx = gamepad.getLeftY(); // * Forward/backward
-    double vy = gamepad.getLeftX(); // * Strafing
-    double a = gamepad.getRightX(); // * Rotation
+    // * Get Joystick Values for driving
+    double vx = gamepad.getLeftY(); // Forward/backward movement
+    double vy = gamepad.getLeftX(); // Strafing movement
+    double a = gamepad.getRightX(); // Rotational movement
 
+    // * Convert Joystick Inputs to Chassis Speeds
     ChassisSpeeds chassisSpeeds = new ChassisSpeeds(vx, vy, a);
 
-    SwerveModuleState moduleStates[] = kinematics.toSwerveModuleStates(chassisSpeeds);
+    // * Convert Chassis Speeds to individual Swerve Module States
+    SwerveModuleState[] moduleStates = kinematics.toSwerveModuleStates(chassisSpeeds);
 
-    for (int i = 0; i < modules.length; i++) {
-      SwerveModuleState state = moduleStates[i];
-      double targetAngle = state.angle.getRotations();
-      double targetSpeed = state.speedMetersPerSecond;
-      Double[] targetSpeedAndAngle = { targetAngle, targetSpeed };
+    // * Stores Swerve Module States inside each Module Object
+    for (int i = 0; i < modules.length; i++)
+      modules[i].state = moduleStates[i];
 
-      SmartDashboard.putNumberArray("Module #" + (i + 1), targetSpeedAndAngle);
-      modules[i].setDriveSpeed(targetSpeed);
-      modules[i].setTargetAngle(targetAngle);
+    // * Loop through each Swerve Module, update Motor Speeds and Target Angles
+    for (CustomSwerveModule module : modules) {
+      double targetAngle = module.state.angle.getRotations();
+      double targetSpeed = module.state.speedMetersPerSecond;
+
+      // * Publish Target Angle and Speed to SmartDashboard for debugging
+      SmartDashboard.putNumber(module.name + " Target Angle", targetAngle);
+      SmartDashboard.putNumber(module.name + " Target Speed", targetSpeed);
+
+      // * Passes Target Speed and Angle to Swerve Module
+      module.setDriveSpeed(targetSpeed);
+      module.setTargetAngle(targetAngle);
     }
 
-    // Todo: Make a More Permanent Elevator Solution
+    // Todo: Implement a more permanent elevator solution
     if (gamepad.getAButton()) {
       elevatorMotor.set(1);
     } else if (gamepad.getBButton()) {
@@ -80,10 +93,10 @@ public class Robot extends TimedRobot {
 
   @Override
   public void testInit() {
-    // * Resets Swerve Module Steer Motor Encoders
-    // * Start Test Mode Briefly After Re-Aligning Wheels Manually
-    for (int i = 0; i < modules.length; i++) {
-      modules[i].resetEncoder();
+    // * Resets All Swerve Module Steer-Motor Encoders
+    // * Enable Test Mode briefly after manually re-aligning wheels
+    for (CustomSwerveModule module : modules) {
+      module.resetEncoder();
     }
   }
 }
