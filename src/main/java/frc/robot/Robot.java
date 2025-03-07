@@ -1,6 +1,6 @@
 package frc.robot;
 
-import org.littletonrobotics.junction.LoggedRobot;
+import edu.wpi.first.wpilibj.TimedRobot;
 
 import com.ctre.phoenix6.hardware.Pigeon2;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
@@ -14,7 +14,7 @@ import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.utils.CustomSwerveModule;
 
-public class Robot extends LoggedRobot {
+public class Robot extends TimedRobot {
   // * Initialize Xbox Controller and IMU (Gyro)
   private final XboxController gamepad = new XboxController(0);
   private final Pigeon2 pigeon = new Pigeon2(10);
@@ -37,13 +37,14 @@ public class Robot extends LoggedRobot {
 
   // Todo: Implement a more permanent elevator solution
   private final SparkMax elevatorMotor = new SparkMax(15, MotorType.kBrushless);
+  private final SparkMax coralMotor = new SparkMax(16, MotorType.kBrushless);
 
   @Override
   public void robotPeriodic() {
     // * Retrieve and normalize Pigeon IMU angles (Yaw, Pitch, Roll)
-    double pigeonYaw = pigeon.getYaw(true).getValueAsDouble() % 360;
-    double pigeonPitch = pigeon.getPitch(true).getValueAsDouble() % 360;
-    double pigeonRoll = pigeon.getRoll(true).getValueAsDouble() % 360;
+    double pigeonYaw = Math.abs(pigeon.getYaw(true).getValueAsDouble() % 360);
+    double pigeonPitch = pigeon.getPitch(true).getValueAsDouble();
+    double pigeonRoll = pigeon.getRoll(true).getValueAsDouble();
 
     // * Display IMU values on the SmartDashboard
     SmartDashboard.putNumber("Yaw", pigeonYaw);
@@ -84,8 +85,13 @@ public class Robot extends LoggedRobot {
       elevatorMotor.set(0.25);
     } else if (gamepad.getBButton()) {
       elevatorMotor.set(-0.25);
+    // } else if (gamepad.getLeftTriggerAxis() > 0.01) {
+      // coralMotor.set(gamepad.getLeftTriggerAxis()/5);
+    // } else if (gamepad.getRightTriggerAxis() > 0.01) {
+      // coralMotor.set(-gamepad.getRightTriggerAxis()/5);
     } else {
       elevatorMotor.stopMotor();
+      coralMotor.stopMotor();
     }
   }
 
