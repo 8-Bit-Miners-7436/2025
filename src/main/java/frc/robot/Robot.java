@@ -1,7 +1,5 @@
 package frc.robot;
 
-import org.littletonrobotics.junction.LoggedRobot;
-
 import com.ctre.phoenix6.hardware.Pigeon2;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.SparkMax;
@@ -10,11 +8,12 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
+import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.utils.CustomSwerveModule;
 
-public class Robot extends LoggedRobot {
+public class Robot extends TimedRobot {
   // * Initialize Xbox Controller and IMU (Gyro)
   private final XboxController gamepad = new XboxController(0);
   private final Pigeon2 pigeon = new Pigeon2(10);
@@ -37,6 +36,7 @@ public class Robot extends LoggedRobot {
 
   // Todo: Implement a more permanent elevator solution
   private final SparkMax elevatorMotor = new SparkMax(15, MotorType.kBrushless);
+  private final SparkMax coralMotor = new SparkMax(16, MotorType.kBrushless);
 
   @Override
   public void robotPeriodic() {
@@ -84,8 +84,13 @@ public class Robot extends LoggedRobot {
       elevatorMotor.set(0.25);
     } else if (gamepad.getBButton()) {
       elevatorMotor.set(-0.25);
+    } else if (gamepad.getLeftTriggerAxis() > 0.1) {
+      coralMotor.set(-gamepad.getLeftTriggerAxis());
+    } else if (gamepad.getRightTriggerAxis() > 0.1) {
+      coralMotor.set(gamepad.getRightTriggerAxis());
     } else {
       elevatorMotor.stopMotor();
+      coralMotor.stopMotor();
     }
   }
 
