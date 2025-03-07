@@ -1,5 +1,7 @@
 package frc.robot;
 
+import org.littletonrobotics.junction.LoggedRobot;
+
 import com.ctre.phoenix6.hardware.Pigeon2;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.SparkMax;
@@ -8,12 +10,11 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
-import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.utils.CustomSwerveModule;
 
-public class Robot extends TimedRobot {
+public class Robot extends LoggedRobot {
   // * Initialize Xbox Controller and IMU (Gyro)
   private final XboxController gamepad = new XboxController(0);
   private final Pigeon2 pigeon = new Pigeon2(10);
@@ -63,22 +64,19 @@ public class Robot extends TimedRobot {
     // * Convert Chassis Speeds to individual Swerve Module States
     SwerveModuleState[] moduleStates = kinematics.toSwerveModuleStates(chassisSpeeds);
 
-    // * Stores Swerve Module States inside each Module Object
+    // * Passes Swerve Module States to each Swerve Module
     for (int i = 0; i < modules.length; i++)
-      modules[i].state = moduleStates[i];
+      modules[i].updateState(moduleStates[i]);
 
     // * Loop through each Swerve Module, update Motor Speeds and Target Angles
     for (CustomSwerveModule module : modules) {
-      double targetAngle = module.state.angle.getRotations();
-      double targetSpeed = module.state.speedMetersPerSecond;
+      // * Get Steer Motor Target Angle and Drive Motor Speed
+      double targetAngle = module.getState().angle.getRotations();
+      double driveSpeed = module.getState().speedMetersPerSecond;
 
       // * Publish Target Angle and Speed to SmartDashboard for debugging
       SmartDashboard.putNumber(module.name + " Target Angle", targetAngle);
-      SmartDashboard.putNumber(module.name + " Target Speed", targetSpeed);
-
-      // * Passes Target Speed and Angle to Swerve Module
-      module.setDriveSpeed(targetSpeed);
-      module.setTargetAngle(targetAngle);
+      SmartDashboard.putNumber(module.name + " Target Speed", driveSpeed);
     }
 
     // Todo: Implement a more permanent elevator solution

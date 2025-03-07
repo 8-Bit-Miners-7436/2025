@@ -15,10 +15,11 @@ public class CustomSwerveModule {
     private final SparkMax steerMotor;
     private final PIDController steerPID;
     private final CANcoder steerEncoder;
+
     public final int number;
     public final String name;
 
-    public SwerveModuleState state; // * Used in Robot.java
+    private SwerveModuleState state;
 
     public CustomSwerveModule(int moduleNumber, String modulePosition) {
         number = moduleNumber;
@@ -39,6 +40,19 @@ public class CustomSwerveModule {
         steerMotor.getEncoder().setPosition(getSteerRotation() / 360.0 * STEER_GEAR_RATIO);
     }
 
+    public SwerveModuleState getState() {
+        // * Allows other files to read module state
+        return state;
+    }
+
+    public void updateState(SwerveModuleState newState) {
+        this.state = newState;
+
+        // * Automatically applies new state
+        setTargetAngle(newState.angle.getRotations());
+        setDriveSpeed(newState.speedMetersPerSecond);
+    }
+
     public void setTargetAngle(double targetAngleDegrees) {
         // * Calculate the PID-adjusted error between the target and current angle
         // ? Possibly already optimized
@@ -54,7 +68,7 @@ public class CustomSwerveModule {
 
     public void setDriveSpeed(double driveSpeed) {
         // ? driveSpeed only ranges from -0.5 to 0.5
-        // * Doubled as a temporary fix
+        // Todo: Replace temporary "* 2" with a concrete solution
         driveMotor.set(driveSpeed * 2);
     }
 
