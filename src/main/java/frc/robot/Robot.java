@@ -81,9 +81,9 @@ public class Robot extends LoggedRobot {
 
     // Todo: Implement a more permanent elevator solution
     if (gamepad.getAButton()) {
-      elevatorMotor.set(1);
+      elevatorMotor.set(0.25);
     } else if (gamepad.getBButton()) {
-      elevatorMotor.set(-1);
+      elevatorMotor.set(-0.25);
     } else {
       elevatorMotor.stopMotor();
     }
