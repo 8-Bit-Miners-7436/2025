@@ -41,9 +41,9 @@ public class Robot extends TimedRobot {
   @Override
   public void robotPeriodic() {
     // * Retrieve and normalize Pigeon IMU angles (Yaw, Pitch, Roll)
-    double pigeonYaw = pigeon.getYaw(true).getValueAsDouble() % 360;
-    double pigeonPitch = pigeon.getPitch(true).getValueAsDouble() % 360;
-    double pigeonRoll = pigeon.getRoll(true).getValueAsDouble() % 360;
+    double pigeonYaw = Math.abs(pigeon.getYaw(true).getValueAsDouble() % 360);
+    double pigeonPitch = pigeon.getPitch(true).getValueAsDouble();
+    double pigeonRoll = pigeon.getRoll(true).getValueAsDouble();
 
     // * Display IMU values on the SmartDashboard
     SmartDashboard.putNumber("Yaw", pigeonYaw);
@@ -84,10 +84,10 @@ public class Robot extends TimedRobot {
       elevatorMotor.set(0.25);
     } else if (gamepad.getBButton()) {
       elevatorMotor.set(-0.25);
-    } else if (gamepad.getLeftTriggerAxis() > 0.1) {
-      coralMotor.set(-gamepad.getLeftTriggerAxis());
-    } else if (gamepad.getRightTriggerAxis() > 0.1) {
-      coralMotor.set(gamepad.getRightTriggerAxis());
+      // } else if (gamepad.getLeftTriggerAxis() > 0.01) {
+      // coralMotor.set(gamepad.getLeftTriggerAxis()/5);
+      // } else if (gamepad.getRightTriggerAxis() > 0.01) {
+      // coralMotor.set(-gamepad.getRightTriggerAxis()/5);
     } else {
       elevatorMotor.stopMotor();
       coralMotor.stopMotor();
