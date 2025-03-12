@@ -71,10 +71,21 @@ public class CustomSwerveModule {
         driveMotor.set(driveSpeed);
     }
 
-    public void resetEncoder() {
+    public void resetSteerEncoder() {
         // * Zeros out Steer-Motor Encoder
         // * Used after adjusting wheel alignment manually
         steerEncoder.setPosition(0.0);
+    }
+
+    public void resetDriveEncoder() {
+        // * Zeros out Drive-Motor Encoder
+        // * Used on Auto Init
+        driveMotor.getEncoder().setPosition(0.0);
+    }
+
+    public double getEncoderDistance() {
+        // * Get Distance Traveled for Auto
+        return driveMotor.getEncoder().getPosition();
     }
 
     private double getSteerRotation() {

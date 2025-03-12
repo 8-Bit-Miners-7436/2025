@@ -1,21 +1,20 @@
 package frc.robot;
 
-import frc.robot.utils.CustomSwerveModule;
-import frc.robot.utils.Elevator;
-
+import org.littletonrobotics.junction.LoggedRobot;
 import org.littletonrobotics.junction.Logger;
 import org.littletonrobotics.junction.networktables.NT4Publisher;
-import org.littletonrobotics.junction.LoggedRobot;
 
-import edu.wpi.first.wpilibj.XboxController;
 import com.ctre.phoenix6.hardware.Pigeon2;
+
 import edu.wpi.first.cameraserver.CameraServer;
 import edu.wpi.first.cscore.UsbCamera;
-
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
+import edu.wpi.first.wpilibj.XboxController;
+import frc.robot.utils.CustomSwerveModule;
+import frc.robot.utils.Elevator;
 
 public class Robot extends LoggedRobot {
   public Robot() {
@@ -27,7 +26,7 @@ public class Robot extends LoggedRobot {
     UsbCamera camera = CameraServer.startAutomaticCapture();
 
     // * Configure the Camera
-    camera.setResolution(1280, 720);
+    camera.setResolution(640, 480);
     camera.setFPS(10);
     camera.setBrightness(20);
   }
@@ -95,11 +94,34 @@ public class Robot extends LoggedRobot {
   }
 
   @Override
+  public void autonomousInit() {
+    for (int i = 0; i < modules.length; i++) {
+      modules[i].resetDriveEncoder();
+    }
+  }
+
+  @Override
+  public void autonomousPeriodic() {
+    // Todo: Adjust Value
+    double targetDistance = 20.0;
+
+    if (modules[0].getEncoderDistance() < targetDistance) {
+      for (int i = 0; i < modules.length; i++) {
+        modules[i].setDriveSpeed(0.5);
+      }
+    } else {
+      for (int i = 0; i < modules.length; i++) {
+        modules[i].setDriveSpeed(0);
+      }
+    }
+  }
+
+  @Override
   public void testInit() {
     // * Resets All Swerve Module Steer-Motor Encoders
     // * Enable Test Mode briefly after manually re-aligning wheels
     for (CustomSwerveModule module : modules) {
-      module.resetEncoder();
+      module.resetSteerEncoder();
     }
   }
 }
