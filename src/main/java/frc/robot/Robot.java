@@ -1,30 +1,41 @@
 package frc.robot;
 
+import frc.robot.utils.CustomSwerveModule;
+import frc.robot.utils.Elevator;
+
 import org.littletonrobotics.junction.Logger;
 import org.littletonrobotics.junction.networktables.NT4Publisher;
 import org.littletonrobotics.junction.LoggedRobot;
 
+import edu.wpi.first.wpilibj.XboxController;
 import com.ctre.phoenix6.hardware.Pigeon2;
-import com.revrobotics.spark.SparkLowLevel.MotorType;
-import com.revrobotics.spark.SparkMax;
+import edu.wpi.first.cameraserver.CameraServer;
+import edu.wpi.first.cscore.UsbCamera;
 
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
-import edu.wpi.first.wpilibj.XboxController;
-import frc.robot.utils.CustomSwerveModule;
 
 public class Robot extends LoggedRobot {
   public Robot() {
     // * Initialize AdvantageKit (Logger)
     Logger.addDataReceiver(new NT4Publisher());
     Logger.start();
+
+    // * Start the Camera Stream
+    UsbCamera camera = CameraServer.startAutomaticCapture();
+
+    // * Configure the Camera
+    camera.setResolution(1280, 720);
+    camera.setFPS(10);
+    camera.setBrightness(20);
   }
 
-  // * Initialize Xbox Controller and IMU (Gyro)
+  // * Initialize Xbox Controller, Elevator, and IMU (Gyro)
   private final XboxController gamepad = new XboxController(0);
   private final Pigeon2 pigeon = new Pigeon2(10);
+  private final Elevator elevator = new Elevator();
 
   // * Create Kinematics Object with Module Offsets from Robot Center (in meters)
   private final SwerveDriveKinematics kinematics = new SwerveDriveKinematics(
@@ -42,13 +53,9 @@ public class Robot extends LoggedRobot {
       new CustomSwerveModule(4, "Rear Right")
   };
 
-  // Todo: Implement a more permanent elevator solution
-  private final SparkMax elevatorMotor = new SparkMax(15, MotorType.kBrushless);
-  private final SparkMax coralMotor = new SparkMax(16, MotorType.kBrushless);
-
   @Override
   public void robotPeriodic() {
-    // * Logs Robot's Rotation/Facing Angle in AdvantageScope
+    // * Log Robot's Rotation/Facing Angle in AdvantageScope
     Logger.recordOutput("RobotRotation", pigeon.getRotation2d());
   }
 
@@ -56,8 +63,8 @@ public class Robot extends LoggedRobot {
   public void teleopPeriodic() {
     // * Get Joystick Values for driving
     double vx = -gamepad.getLeftY(); // Forward/backward movement
-    double vy = gamepad.getLeftX(); // Strafing movement
-    double a = gamepad.getRightX(); // Rotational movement
+    double vy = -gamepad.getLeftX(); // Strafing movement
+    double a = -gamepad.getRightX(); // Rotational movement
 
     // * Convert Joystick Inputs to Chassis Speeds
     ChassisSpeeds chassisSpeeds = new ChassisSpeeds(vx, vy, a);
@@ -65,27 +72,26 @@ public class Robot extends LoggedRobot {
     // * Convert Chassis Speeds to individual Swerve Module States
     SwerveModuleState[] moduleStates = kinematics.toSwerveModuleStates(chassisSpeeds);
 
-    // * logs Module States in AdvantageScope
+    // * logs Module States and Chassis Speeds in AdvantageScope
     Logger.recordOutput("ModuleStates", moduleStates);
+    Logger.recordOutput("ChassisSpeeds", chassisSpeeds);
 
-    // * Passes Swerve Module States to each Swerve Module
+    // * Pass Swerve Module States to each Swerve Module
     for (int i = 0; i < modules.length; i++) {
       modules[i].updateState(moduleStates[i]);
     }
 
-    // Todo: Implement a more permanent elevator solution
-    if (gamepad.getAButton()) {
-      elevatorMotor.set(0.25);
-    } else if (gamepad.getBButton()) {
-      elevatorMotor.set(-0.25);
-    } else if (gamepad.getLeftTriggerAxis() > 0.01) {
-      coralMotor.set(gamepad.getLeftTriggerAxis() / 5);
-    } else if (gamepad.getRightTriggerAxis() > 0.01) {
-      coralMotor.set(-gamepad.getRightTriggerAxis() / 4);
+    // * Pass Gamepad Bumper to Elevator
+    if (gamepad.getLeftBumperButton()) {
+      elevator.lowerElevator();
+    } else if (gamepad.getRightBumperButton()) {
+      elevator.raiseElevator();
     } else {
-      elevatorMotor.stopMotor();
-      coralMotor.stopMotor();
+      elevator.stopElevator();
     }
+
+    // * Pass Gamepad Trigger Values to Coral Launcher
+    elevator.setCoralSpeed(gamepad.getLeftTriggerAxis() - gamepad.getRightTriggerAxis());
   }
 
   @Override

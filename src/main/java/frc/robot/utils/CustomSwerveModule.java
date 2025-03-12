@@ -6,7 +6,6 @@ import com.revrobotics.spark.SparkMax;
 
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 public class CustomSwerveModule {
     private static final double STEER_GEAR_RATIO = 150.0 / 7.0;
@@ -54,7 +53,7 @@ public class CustomSwerveModule {
     }
 
     public void setTargetAngle(double targetAngleDegrees) {
-        // * Calculate the PID-adjusted error between the target and current angle
+        // * Calculate the error between the target and current angle
         double error = targetAngleDegrees - getSteerRotation();
 
         // * Optimize error for wrap-around
@@ -64,17 +63,12 @@ public class CustomSwerveModule {
             error += 1;
         }
 
-        // * Log pidOutput to SmartDashboard
-        SmartDashboard.putNumber(name + " Steer Motor Speed", error);
-
-        // * Set the steer motor speed based on the PID-adjusted error
+        // * Set the steer motor speed based on error
         steerMotor.set(error);
     }
 
     public void setDriveSpeed(double driveSpeed) {
-        // ? driveSpeed only ranges from -0.5 to 0.5
-        // Todo: Replace temporary "* 2" with a concrete solution
-        driveMotor.set(driveSpeed * 2);
+        driveMotor.set(driveSpeed);
     }
 
     public void resetEncoder() {
@@ -82,8 +76,6 @@ public class CustomSwerveModule {
         // * Used after adjusting wheel alignment manually
         steerEncoder.setPosition(0.0);
     }
-
-    // ** Internal Utility Methods ** //
 
     private double getSteerRotation() {
         // * Returns the Steer-Motor Encoder's angle in rotations
