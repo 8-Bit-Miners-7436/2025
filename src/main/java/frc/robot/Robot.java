@@ -1,5 +1,9 @@
 package frc.robot;
 
+import org.littletonrobotics.junction.Logger;
+import org.littletonrobotics.junction.networktables.NT4Publisher;
+import org.littletonrobotics.junction.LoggedRobot;
+
 import com.ctre.phoenix6.hardware.Pigeon2;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.SparkMax;
@@ -8,12 +12,16 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
-import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.XboxController;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.utils.CustomSwerveModule;
 
-public class Robot extends TimedRobot {
+public class Robot extends LoggedRobot {
+  public Robot() {
+    // * Initialize AdvantageKit (Logger)
+    Logger.addDataReceiver(new NT4Publisher());
+    Logger.start();
+  }
+
   // * Initialize Xbox Controller and IMU (Gyro)
   private final XboxController gamepad = new XboxController(0);
   private final Pigeon2 pigeon = new Pigeon2(10);
@@ -40,21 +48,14 @@ public class Robot extends TimedRobot {
 
   @Override
   public void robotPeriodic() {
-    // * Retrieve and normalize Pigeon IMU angles (Yaw, Pitch, Roll)
-    double pigeonYaw = Math.abs(pigeon.getYaw(true).getValueAsDouble() % 360);
-    double pigeonPitch = pigeon.getPitch(true).getValueAsDouble();
-    double pigeonRoll = pigeon.getRoll(true).getValueAsDouble();
-
-    // * Display IMU values on the SmartDashboard
-    SmartDashboard.putNumber("Yaw", pigeonYaw);
-    SmartDashboard.putNumber("Pitch", pigeonPitch);
-    SmartDashboard.putNumber("Roll", pigeonRoll);
+    // * Logs Robot's Rotation/Facing Angle in AdvantageScope
+    Logger.recordOutput("RobotRotation", pigeon.getRotation2d());
   }
 
   @Override
   public void teleopPeriodic() {
     // * Get Joystick Values for driving
-    double vx = gamepad.getLeftY(); // Forward/backward movement
+    double vx = -gamepad.getLeftY(); // Forward/backward movement
     double vy = gamepad.getLeftX(); // Strafing movement
     double a = gamepad.getRightX(); // Rotational movement
 
@@ -64,19 +65,12 @@ public class Robot extends TimedRobot {
     // * Convert Chassis Speeds to individual Swerve Module States
     SwerveModuleState[] moduleStates = kinematics.toSwerveModuleStates(chassisSpeeds);
 
+    // * logs Module States in AdvantageScope
+    Logger.recordOutput("ModuleStates", moduleStates);
+
     // * Passes Swerve Module States to each Swerve Module
-    for (int i = 0; i < modules.length; i++)
+    for (int i = 0; i < modules.length; i++) {
       modules[i].updateState(moduleStates[i]);
-
-    // * Loop through each Swerve Module, update Motor Speeds and Target Angles
-    for (CustomSwerveModule module : modules) {
-      // * Get Steer Motor Target Angle and Drive Motor Speed
-      double targetAngle = module.getState().angle.getRotations();
-      double driveSpeed = module.getState().speedMetersPerSecond;
-
-      // * Publish Target Angle and Speed to SmartDashboard for debugging
-      SmartDashboard.putNumber(module.name + " Target Angle", targetAngle);
-      SmartDashboard.putNumber(module.name + " Target Speed", driveSpeed);
     }
 
     // Todo: Implement a more permanent elevator solution
@@ -84,10 +78,10 @@ public class Robot extends TimedRobot {
       elevatorMotor.set(0.25);
     } else if (gamepad.getBButton()) {
       elevatorMotor.set(-0.25);
-      // } else if (gamepad.getLeftTriggerAxis() > 0.01) {
-      // coralMotor.set(gamepad.getLeftTriggerAxis()/5);
-      // } else if (gamepad.getRightTriggerAxis() > 0.01) {
-      // coralMotor.set(-gamepad.getRightTriggerAxis()/5);
+    } else if (gamepad.getLeftTriggerAxis() > 0.01) {
+      coralMotor.set(gamepad.getLeftTriggerAxis() / 5);
+    } else if (gamepad.getRightTriggerAxis() > 0.01) {
+      coralMotor.set(-gamepad.getRightTriggerAxis() / 4);
     } else {
       elevatorMotor.stopMotor();
       coralMotor.stopMotor();

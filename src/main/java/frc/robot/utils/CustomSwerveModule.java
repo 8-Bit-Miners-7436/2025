@@ -55,15 +55,20 @@ public class CustomSwerveModule {
 
     public void setTargetAngle(double targetAngleDegrees) {
         // * Calculate the PID-adjusted error between the target and current angle
-        // ? Possibly already optimized
-        // ! Needs Testing
-        double pidOutput = steerPID.calculate(getSteerRotation(), targetAngleDegrees);
+        double error = targetAngleDegrees - getSteerRotation();
+
+        // * Optimize error for wrap-around
+        if (error > 0.5) {
+            error -= 1;
+        } else if (error < -0.5) {
+            error += 1;
+        }
 
         // * Log pidOutput to SmartDashboard
-        SmartDashboard.putNumber(name + " Steer Motor Speed", pidOutput);
+        SmartDashboard.putNumber(name + " Steer Motor Speed", error);
 
         // * Set the steer motor speed based on the PID-adjusted error
-        steerMotor.set(pidOutput);
+        steerMotor.set(error);
     }
 
     public void setDriveSpeed(double driveSpeed) {
