@@ -1,20 +1,21 @@
 package frc.robot;
 
+import frc.robot.utils.CustomSwerveModule;
+import frc.robot.utils.Elevator;
+
 import org.littletonrobotics.junction.LoggedRobot;
 import org.littletonrobotics.junction.Logger;
 import org.littletonrobotics.junction.networktables.NT4Publisher;
 
 import com.ctre.phoenix6.hardware.Pigeon2;
+import edu.wpi.first.cscore.UsbCamera;
+import edu.wpi.first.wpilibj.XboxController;
 
 import edu.wpi.first.cameraserver.CameraServer;
-import edu.wpi.first.cscore.UsbCamera;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
-import edu.wpi.first.wpilibj.XboxController;
-import frc.robot.utils.CustomSwerveModule;
-import frc.robot.utils.Elevator;
 
 public class Robot extends LoggedRobot {
   public Robot() {
@@ -27,7 +28,7 @@ public class Robot extends LoggedRobot {
 
     // * Configure the Camera
     camera.setResolution(640, 480);
-    camera.setFPS(10);
+    camera.setFPS(30);
     camera.setBrightness(20);
   }
 
@@ -39,9 +40,9 @@ public class Robot extends LoggedRobot {
   // * Create Kinematics Object with Module Offsets from Robot Center (in meters)
   private final SwerveDriveKinematics kinematics = new SwerveDriveKinematics(
       new Translation2d(0.34, 0.3), // Front Left
-      new Translation2d(0.34, -0.3), // Front Right
-      new Translation2d(-0.34, 0.3), // Rear Left
-      new Translation2d(-0.34, -0.3) // Rear Right
+      new Translation2d(0.34, -0.3),  // Front Right
+      new Translation2d(-0.34, 0.3),  // Rear Left
+      new Translation2d(-0.34, -0.3)    // Rear Right
   );
 
   // * Initialize Swerve Modules and packages them in an Array for Easy Access
@@ -56,6 +57,13 @@ public class Robot extends LoggedRobot {
   public void robotPeriodic() {
     // * Log Robot's Rotation/Facing Angle in AdvantageScope
     Logger.recordOutput("RobotRotation", pigeon.getRotation2d());
+  }
+
+  int elevatorLevel = 1;
+
+  @Override
+  public void teleopInit() {
+    elevator.resetEncoder();
   }
 
   @Override
@@ -80,48 +88,38 @@ public class Robot extends LoggedRobot {
       modules[i].updateState(moduleStates[i]);
     }
 
-    // * Pass Gamepad Bumper to Elevator
-    if (gamepad.getLeftBumperButton()) {
-      elevator.lowerElevator();
-    } else if (gamepad.getRightBumperButton()) {
-      elevator.raiseElevator();
-    } else {
-      elevator.stopElevator();
-    }
+    elevatorLevel = elevator.moveTo(getPressedButton());
+    Logger.recordOutput("Elevator Pos", elevator.getPosition());
 
     // * Pass Gamepad Trigger Values to Coral Launcher
-    elevator.setCoralSpeed(gamepad.getLeftTriggerAxis() - gamepad.getRightTriggerAxis());
+    elevator.setCoralSpeed((gamepad.getLeftTriggerAxis() - gamepad.getRightTriggerAxis()) / 2);
+  }
+  
+  private int getPressedButton() {
+    if (gamepad.getAButton()) return 1;                //  A: Move to Bottom
+    else if (gamepad.getBButton()) return 2;           //  B: Move to Coral Intake
+    else if (gamepad.getXButton()) return 3;           //  X: Move to L2
+    else if (gamepad.getYButton()) return 4;           //  Y: Move to L3 (Top)
+    else if (gamepad.getLeftBumperButton()) return 5;  // LB: Manually Move Down
+    else if (gamepad.getRightBumperButton()) return 6; // RB: Manually Move Up
+    else return elevatorLevel;
   }
 
   @Override
   public void autonomousInit() {
-    for (int i = 0; i < modules.length; i++) {
-      modules[i].resetDriveEncoder();
+    for (CustomSwerveModule module : modules) {
+      module.resetDriveEncoder();
+      module.resetSteerEncoder();
     }
   }
 
   @Override
   public void autonomousPeriodic() {
-    // Todo: Adjust Value
-    double targetDistance = 20.0;
-
-    if (modules[0].getEncoderDistance() < targetDistance) {
-      for (int i = 0; i < modules.length; i++) {
-        modules[i].setDriveSpeed(0.5);
-      }
-    } else {
-      for (int i = 0; i < modules.length; i++) {
+    if (modules[0].getEncoderDistance() > -30)
+      for (int i = 0; i < modules.length; i++)
+        modules[i].setDriveSpeed(-0.5);
+    else
+      for (int i = 0; i < modules.length; i++)
         modules[i].setDriveSpeed(0);
-      }
-    }
-  }
-
-  @Override
-  public void testInit() {
-    // * Resets All Swerve Module Steer-Motor Encoders
-    // * Enable Test Mode briefly after manually re-aligning wheels
-    for (CustomSwerveModule module : modules) {
-      module.resetSteerEncoder();
-    }
   }
 }
