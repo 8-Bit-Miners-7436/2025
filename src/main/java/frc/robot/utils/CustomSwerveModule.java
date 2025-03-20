@@ -1,12 +1,10 @@
 package frc.robot.utils;
 
-import org.littletonrobotics.junction.Logger;
-
 import com.ctre.phoenix6.hardware.CANcoder;
+import com.revrobotics.RelativeEncoder;
 import com.revrobotics.spark.SparkBase.PersistMode;
 import com.revrobotics.spark.SparkBase.ResetMode;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
-import com.revrobotics.RelativeEncoder;
 import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.config.SparkMaxConfig;
 
@@ -21,83 +19,54 @@ public class CustomSwerveModule {
     private final RelativeEncoder driveEncoder;
     private final CANcoder steerEncoder;
 
-    public final int number;
-    public final String name;
-
-    public SwerveModuleState state;
-
-    private final SparkMaxConfig driveConfig;
-    private final SparkMaxConfig steerConfig;
-
     public CustomSwerveModule(int moduleNumber, String modulePosition) {
-        number = moduleNumber;
-        name = modulePosition;
-
-        // * Initialize drive and steer motors based on module numbering
+        // Initialize Drive and Steer Motors Based on Module Numbering
         driveMotor = new SparkMax(moduleNumber * 2, MotorType.kBrushless);
         steerMotor = new SparkMax(moduleNumber * 2 + 1, MotorType.kBrushless);
 
-        // * Initialize the Motor Encoders for angle and positioning feedback
+        // Initialize the Motor Encoders for Angle and Positioning Feedback
         steerEncoder = new CANcoder(moduleNumber + 10);
         driveEncoder = driveMotor.getEncoder();
 
-        // * Initialize PID Controller for steering with gains
+        // Initialize PID Controller
         steerPID = new PIDController(0.5, 0, 0.05);
         steerPID.enableContinuousInput(-0.5, 0.5);
-        
-        // * Impose Current Limit on Swerve Motors to prevent Brownout
-        driveConfig = new SparkMaxConfig();
-        steerConfig = new SparkMaxConfig();
-        driveConfig.smartCurrentLimit(40);
-        steerConfig.smartCurrentLimit(20);
-        driveMotor.configure(driveConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
-        steerMotor.configure(steerConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
+
+        // Impose Current Limit on Motors to Prevent Brownout
+        SparkMaxConfig motorConfig = new SparkMaxConfig();
+        motorConfig.smartCurrentLimit(30);
+        driveMotor.configure(motorConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
+        steerMotor.configure(motorConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
     }
 
     public void updateState(SwerveModuleState newState) {
-        newState.optimize(Rotation2d.fromRotations(getSteerRotation()));
+        // Get Steer Motor Angle in Rotations
+        double steerMotorRot = steerEncoder.getAbsolutePosition().refresh().getValueAsDouble();
 
-        // * Automatically applies new state
-        setTargetAngle(newState.angle.getRotations());
-        setDriveSpeed(newState.speedMetersPerSecond);
-    }
+        // Fix Wrap Around Issues
+        newState.optimize(Rotation2d.fromRotations(steerMotorRot));
 
-    public void setTargetAngle(double targetAngle) {
-        // * Calculate the error between the target and current angle
-        double steerSpeed = steerPID.calculate(getSteerRotation(), targetAngle);
+        // Calculate Speed Based on Error between the Target and Current Angle
+        double steerSpeed = steerPID.calculate(steerMotorRot, newState.angle.getRotations());
 
-        // ? PID Diagnostics
-        Logger.recordOutput("Current Angle", getSteerRotation());
-        Logger.recordOutput("Target Angle", targetAngle);
-
-        // * Set the steer motor speed based on error
+        // Pass Finalized Values to Motors
         steerMotor.set(steerSpeed);
+        driveMotor.set(newState.speedMetersPerSecond);
     }
 
+    // Set Drive Motor Speed
     public void setDriveSpeed(double driveSpeed) {
-        // * Set Module Drive Speed
         driveMotor.set(driveSpeed);
     }
 
-    public void resetSteerEncoder() {
-        // * Zero out Steer-Motor Encoder
-        // * Used after adjusting wheel alignment manually
-        steerEncoder.setPosition(0.0);
+    // Zero Out Motor Encoders to Correct Alignment
+    public void resetEncoders() {
+        steerEncoder.setPosition(0);
+        driveEncoder.setPosition(0);
     }
 
-    public void resetDriveEncoder() {
-        // * Zero out Drive-Motor Encoder
-        // * Used on Auto Init
-        driveEncoder.setPosition(0.0);
-    }
-
+    // Get Distance Traveled for Auto
     public double getEncoderDistance() {
-        // * Get Distance Traveled for Auto
         return driveEncoder.getPosition();
-    }
-
-    private double getSteerRotation() {
-        // * Returns the Steer-Motor Encoder's angle in rotations
-        return steerEncoder.getAbsolutePosition().refresh().getValueAsDouble();
     }
 }

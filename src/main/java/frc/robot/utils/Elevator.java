@@ -1,107 +1,52 @@
 package frc.robot.utils;
 
+import com.revrobotics.RelativeEncoder;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
+import com.revrobotics.spark.SparkMax;
 
 import edu.wpi.first.wpilibj.DigitalInput;
 
-import com.revrobotics.RelativeEncoder;
-import com.revrobotics.spark.SparkMax;
-
 public class Elevator {
-    private final SparkMax elevatorMotor;
-    private final RelativeEncoder elevatorMotorEncoder;
-    private final SparkMax coralMotor;
-    public final DigitalInput upperLimitSwitch;
-    public final DigitalInput lowerLimitSwitch;
+  // Initialize Motors, Encoder, and Limit Switches
+  private final SparkMax coralMotor = new SparkMax(16, MotorType.kBrushless);
+  private final SparkMax elevatorMotor = new SparkMax(15, MotorType.kBrushless);
+  private final RelativeEncoder elevatorEncoder = elevatorMotor.getEncoder();
+  private final DigitalInput upperLimitSwitch = new DigitalInput(9);
+  private final DigitalInput lowerLimitSwitch = new DigitalInput(0);
 
-    public Elevator() {
-        elevatorMotor = new SparkMax(15, MotorType.kBrushless);
-        elevatorMotorEncoder = elevatorMotor.getEncoder();
-        coralMotor = new SparkMax(16, MotorType.kBrushless);
-        upperLimitSwitch = new DigitalInput(9);
-        lowerLimitSwitch = new DigitalInput(0);
+  public void moveToLevel(String level) {
+    switch (level) {
+      case "BASE"   -> setElevatorSpeed(-1);   //  A: Move to Bottom
+      case "INTAKE" -> moveTo(10);             //  B: Move to Coral Intake
+      case "L2"     -> moveTo(50);             //  X: Move to L2
+      case "L3"     -> setElevatorSpeed(1);    //  Y: Move to L3 (Top)
+      case "DOWN"   -> setElevatorSpeed(-0.5); // LB: Manually Move Down
+      case "UP"     -> setElevatorSpeed(0.5);  // RB: Manually Move Up
+      case "STOP"   -> setElevatorSpeed(0);
     }
+  }
 
-    public int moveTo(int level) {
-        double pos = getPosition();
-        switch (level) {
-            case 0:
-                stopElevator();
-                level = 0;
-                break;
-            case 1:
-                lowerElevator();
-                level = 1;
-                break;
-            case 2:
-                if (pos < 9) {
-                    raiseElevator();
-                } else if (pos > 13) {
-                    lowerElevator();
-                } else {
-                    stopElevator();
-                }
-                level = 2;
-                break;
-            case 3:
-                if (pos < 48) {
-                    raiseElevator();
-                } else if (pos > 52) {
-                    lowerElevator();
-                } else {
-                    stopElevator();
-                }
-                level = 3;
-                break;
-            case 4:
-                raiseElevator();
-                level = 4;
-                break;
-            case 5:
-                lowerElevator();
-                level = 0;
-                break;
-            case 6:
-                raiseElevator();
-                level = 0;
-                break;
-        }
-        return level;
-    }
+  // Moves Elevator Up or Down Till Within 2 Rotations of The Target
+  private void moveTo(double targetRot) {
+    double currentRot = elevatorEncoder.getPosition();
+    if (currentRot < targetRot - 2) setElevatorSpeed(1);
+    if (currentRot > targetRot + 2) setElevatorSpeed(-1);
+  }
 
-    public void stopElevator() {
-        elevatorMotor.stopMotor();
-    }
+  // Moves Elevator Only if The Respective Limit Switch is Not Pressed
+  public void setElevatorSpeed(double speed) {
+    boolean limitHit = (speed > 0 ? upperLimitSwitch.get() : lowerLimitSwitch.get());
+    if (limitHit) elevatorMotor.stopMotor();
+    else          elevatorMotor.set(speed);
+  }
 
-    public double getPosition() {
-        return elevatorMotorEncoder.getPosition();
-    }
+  // Spins Coral Launcher Only if Speed Above 0.1 to Prevent Missfire
+  public void setCoralSpeed(double speed) {
+    coralMotor.set(speed > 0.1 ? speed : 0);
+  }
 
-    public void raiseElevator() {
-        if (upperLimitSwitch.get()) {
-            elevatorMotor.stopMotor();
-        } else {
-            elevatorMotor.set(0.5);
-        }
-    }
-
-    public void lowerElevator() {
-        if (lowerLimitSwitch.get()) {
-            elevatorMotor.stopMotor();
-        } else {
-            elevatorMotor.set(-0.5);
-        }
-    }
-
-    public void setCoralSpeed(double speed) {
-        if (Math.abs(speed) > 0.01) {
-            coralMotor.set(speed);
-        } else {
-            coralMotor.stopMotor();
-        }
-    }
-
-    public void resetEncoder() {
-        elevatorMotorEncoder.setPosition(0);
-    }
+  // Resets Encoder to Ensure Correct Height Detection
+  public void resetEncoder() {
+    elevatorEncoder.setPosition(0);
+  }
 }
