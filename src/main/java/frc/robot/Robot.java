@@ -71,8 +71,10 @@ public class Robot extends LoggedRobot {
       modules[i++].updateState(state);
 
     // Move Elevator to Pressed Button's Corresponding Reef Level
-    if (getPressedButton() != null)
-      elevator.moveToLevel(getPressedButton());
+    String elevatorLevel = getPressedButton();
+    if (elevatorLevel != null)
+      elevator.moveToLevel(elevatorLevel);
+    elevator.updateElevator();
 
     // Set Coral Launcher Speed based on Trigger Input
     elevator.setCoralSpeed(0.5 * (gamepad.getLeftTriggerAxis() - gamepad.getRightTriggerAxis()));
@@ -80,12 +82,14 @@ public class Robot extends LoggedRobot {
 
   // Gets Pressed Gamepad Button for Elevator Control
   private String getPressedButton() {
-    if (gamepad.getAButton()) return "BASE";          //  A: Move to Bottom
-    if (gamepad.getBButton()) return "INTAKE";        //  B: Move to Coral Intake
-    if (gamepad.getXButton()) return "L2";            //  X: Move to L2
-    if (gamepad.getYButton()) return "L3";            //  Y: Move to L3 (Top)
+    if (gamepad.getAButtonReleased()) return "BASE";          //  A: Move to Bottom
+    if (gamepad.getBButtonReleased()) return "INTAKE";        //  B: Move to Coral Intake
+    if (gamepad.getXButtonReleased()) return "L2";            //  X: Move to L2
+    if (gamepad.getYButtonReleased()) return "L3";            //  Y: Move to L3 (Top)
     if (gamepad.getLeftBumperButton()) return "DOWN"; // LB: Manually Move Down
     if (gamepad.getRightBumperButton()) return "UP";  // RB: Manually Move Up
+    if (gamepad.getLeftBumperButtonReleased()) return "STOP";
+    if (gamepad.getRightBumperButtonReleased()) return "STOP";
     return null;
   }
 
@@ -94,7 +98,14 @@ public class Robot extends LoggedRobot {
     // Zero Out all Module Encoders to Fix Alignment Issues
     for (CustomSwerveModule module : modules)
       module.resetEncoders();
-}
+  }
+
+  @Override
+  public void testInit() {
+    // Zero Out all Module Encoders to Fix Alignment Issues
+    for (CustomSwerveModule module : modules)
+      module.resetEncoders();
+  }
 
   @Override
   public void autonomousPeriodic() {
