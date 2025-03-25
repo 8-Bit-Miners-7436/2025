@@ -20,6 +20,7 @@ public class Robot extends LoggedRobot {
   private final XboxController gamepad = new XboxController(0);
   private final Pigeon2 pigeon = new Pigeon2(10);
   private final Elevator elevator = new Elevator();
+  private double[] limelightData;
 
   public Robot() {
     // Initialize AdvantageKit (Logger)
@@ -36,19 +37,30 @@ public class Robot extends LoggedRobot {
 
   // Create Kinematics Object w/ Module Offsets from Robot Center (in meters)
   private final SwerveDriveKinematics kinematics = new SwerveDriveKinematics(
-      new Translation2d(0.34, 0.3),   // Front Left
-      new Translation2d(0.34, -0.3),  // Front Right
-      new Translation2d(-0.34, 0.3),  // Rear Left
-      new Translation2d(-0.34, -0.3)  // Rear Right
-  );
+    new Translation2d(0.34, 0.3),   // Front Left
+    new Translation2d(0.34, -0.3),  // Front Right
+    new Translation2d(-0.34, 0.3),  // Rear Left
+    new Translation2d(-0.34, -0.3)  // Rear Right
+    );
 
   // Package Initialized Swerve Modules in an Array for Easy Access
   private final CustomSwerveModule[] modules = new CustomSwerveModule[] {
-      new CustomSwerveModule(1, "Front Left"),
-      new CustomSwerveModule(2, "Front Right"),
-      new CustomSwerveModule(3, "Rear Left"),
-      new CustomSwerveModule(4, "Rear Right")
+    new CustomSwerveModule(1, "Front Left"),
+    new CustomSwerveModule(2, "Front Right"),
+    new CustomSwerveModule(3, "Rear Left"),
+    new CustomSwerveModule(4, "Rear Right")
   };
+
+
+  @Override
+  public void robotPeriodic() {
+    limelightData = new double[] {
+      LimelightHelpers.getTX("limelight"),
+      LimelightHelpers.getTY("limelight"),
+      LimelightHelpers.getTA("limelight")
+    };
+    Logger.recordOutput("LimelightData", limelightData);
+  }
 
   @Override
   public void teleopPeriodic() {
@@ -56,7 +68,11 @@ public class Robot extends LoggedRobot {
     double vx = -gamepad.getLeftY(); // Forward/backward movement
     double vy = -gamepad.getLeftX(); // Strafing movement
     double w = -gamepad.getRightX(); // Rotational movement
-
+    if (LimelightHelpers.getTV("limelight") && gamepad.getStartButton()) {
+      vx = -.03 * (limelightData[2] - 10);
+      // vy = -.03 * limelightData[0];
+      w = -.03 * limelightData[0];
+    }
     // Convert Joystick Inputs to Swerve Module Instructions (States)
     ChassisSpeeds chassisSpeeds = new ChassisSpeeds(vx, vy, w);
     SwerveModuleState[] moduleStates = kinematics.toSwerveModuleStates(chassisSpeeds);
