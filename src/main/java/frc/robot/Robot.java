@@ -9,7 +9,7 @@ import com.ctre.phoenix6.hardware.Pigeon2;
 import edu.wpi.first.cameraserver.CameraServer;
 import edu.wpi.first.cscore.UsbCamera;
 import edu.wpi.first.wpilibj.XboxController;
-
+import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
@@ -20,7 +20,8 @@ public class Robot extends LoggedRobot {
   private final XboxController gamepad = new XboxController(0);
   private final Pigeon2 pigeon = new Pigeon2(10);
   private final Elevator elevator = new Elevator();
-  private double[] limelightData;
+  private Pose3d llTranslationData;
+  private double[] llRotationData;
 
   public Robot() {
     // Initialize AdvantageKit (Logger)
@@ -54,12 +55,10 @@ public class Robot extends LoggedRobot {
 
   @Override
   public void robotPeriodic() {
-    limelightData = new double[] {
-      LimelightHelpers.getTX("limelight"),
-      LimelightHelpers.getTY("limelight"),
-      LimelightHelpers.getTA("limelight")
-    };
-    Logger.recordOutput("LimelightData", limelightData);
+    llTranslationData = LimelightHelpers.getTargetPose3d_CameraSpace("limelight");
+    llRotationData = LimelightHelpers.getCameraPose_TargetSpace("limelight");
+    Logger.recordOutput("LimelightData", llTranslationData);
+    Logger.recordOutput("LimelightRotationData", llRotationData);
   }
 
   @Override
@@ -69,9 +68,10 @@ public class Robot extends LoggedRobot {
     double vy = -gamepad.getLeftX(); // Strafing movement
     double w = -gamepad.getRightX(); // Rotational movement
     if (LimelightHelpers.getTV("limelight") && gamepad.getStartButton()) {
-      vx = -.03 * (limelightData[2] - 10);
-      // vy = -.03 * limelightData[0];
-      w = -.03 * limelightData[0];
+      w = 0.03 * llRotationData[4];
+      if (Math.abs(w) < 0.1) w = 0;
+      vy = (Math.abs(llRotationData[4]) > 1) ? 0 : -llTranslationData.getX();
+      vx = (Math.abs(llTranslationData.getX()) > 1) ? 0 : llTranslationData.getY();
     }
     // Convert Joystick Inputs to Swerve Module Instructions (States)
     ChassisSpeeds chassisSpeeds = new ChassisSpeeds(vx, vy, w);
