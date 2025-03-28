@@ -6,10 +6,12 @@ import org.littletonrobotics.junction.Logger;
 import org.littletonrobotics.junction.networktables.NT4Publisher;
 
 import com.ctre.phoenix6.hardware.Pigeon2;
+
 import edu.wpi.first.cameraserver.CameraServer;
 import edu.wpi.first.cscore.UsbCamera;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.math.geometry.Pose3d;
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
@@ -52,7 +54,6 @@ public class Robot extends LoggedRobot {
     new CustomSwerveModule(4, "Rear Right")
   };
 
-
   @Override
   public void robotPeriodic() {
     llTranslationData = LimelightHelpers.getTargetPose3d_CameraSpace("limelight");
@@ -75,7 +76,14 @@ public class Robot extends LoggedRobot {
     }
     // Convert Joystick Inputs to Swerve Module Instructions (States)
     ChassisSpeeds chassisSpeeds = new ChassisSpeeds(vx, vy, w);
-    SwerveModuleState[] moduleStates = kinematics.toSwerveModuleStates(chassisSpeeds);
+    SwerveModuleState[] moduleStates = kinematics.toSwerveModuleStates(
+      ChassisSpeeds.fromFieldRelativeSpeeds(
+        chassisSpeeds,
+        Rotation2d.fromDegrees(pigeon.getYaw().refresh().getValue().magnitude())
+      )
+    );
+    SwerveDriveKinematics.desaturateWheelSpeeds(moduleStates, 1);
+
 
     // Send Swerve Diagnostics to AdvantageScope
     Logger.recordOutput("RobotRotation", pigeon.getRotation2d());
@@ -121,6 +129,7 @@ public class Robot extends LoggedRobot {
     // Zero Out all Module Encoders to Fix Alignment Issues
     for (CustomSwerveModule module : modules)
       module.resetEncoders();
+    pigeon.reset();
   }
 
   @Override
